@@ -11,13 +11,13 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms
 
 from dataset import DirConverStegoDataset
-from model import KovViT
+from model import KovViT, ViT
 from visualization_functions import Plt_hist, visualize, build_confusion_matrix, visualize_confusion_matrix
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device: ", device, f"({torch.cuda.get_device_name(device)})" if torch.cuda.is_available() else "")
 
-algorithm = 'MULTIAL'
+algorithm = 'HUGO'
 
 amount_of_pictures = 80000
 data_size = 70000
@@ -55,18 +55,35 @@ val_sampler = SubsetRandomSampler(val_indices)
 train_loader = DataLoader(data_train, batch_size=batch_size, sampler=train_sampler)
 val_loader = DataLoader(data_train, batch_size=batch_size, sampler=val_sampler)
 
-nn_model = KovViT(
-    device=device,
-    img_size=256,
+# TODO: Слева - с SRM
+# TODO: Справа - без SRM
+
+nn_model = ViT(
+    image_size=256,
     patch_size=8,
-    n_channels=1,
-    hidden_dim=32,
-    nhead=8,
-    dim_feedforward=16,
-    blocks=1,
-    mlp_dim=1024,
-    n_classes=2,
+    num_classes=2,
+    channels=1,
+    dim=1024,
+    depth=6,
+    heads=16,
+    mlp_dim=2048,
+    dropout=0.1,
+    emb_dropout=0.1,
+    device=device
 )
+# KovViT(
+#     device=device,
+#     img_size=256,
+#     patch_size=16,
+#     n_channels=1,
+#     hidden_dim=512,
+#     nhead=16,
+#     num_layers=4,
+#     mlp_dim=1024,
+#     n_classes=2,
+# dropout = 0.1,
+# emb_dropout = 0.1
+# )
 
 nn_model.type(torch.cuda.FloatTensor)
 nn_model.to(device)
@@ -80,7 +97,7 @@ criterion = nn.CrossEntropyLoss().type(torch.cuda.FloatTensor)
 
 optimizer = torch.optim.AdamW(
     nn_model.parameters(),
-    lr=0.01,
+    lr=0.001,
     betas=(0.9, 0.999),
     eps=1e-8,
     # weight_decay=0.9,
@@ -156,9 +173,13 @@ def train_model(model, train_loader, val_loader, loss, optimizer, scheduler, num
             epoch + 1, ave_loss, val_loss, train_accuracy, val_accuracy))
 
         if save:
-            torch.save(model.state_dict(), os.path.join('./trained', "cnn_epoch{:03d}.pth".format(epoch + 1)))
+            # TODO: trained - c SRM
+            # TODO: trained2 - без SRM
+            torch.save(model.state_dict(), os.path.join('./trained2', "cnn_epoch{:03d}.pth".format(epoch + 1)))
             if (best_epoch == epoch + 1):
-                torch.save(model.state_dict(), os.path.join('./best_checkpoints',
+                # TODO: best_checkpoints - c SRM
+                # TODO: best_checkpoints2 - без SRM
+                torch.save(model.state_dict(), os.path.join('./best_checkpoints2',
                                                             f"cnn_epoch{epoch + 1:03d}_{algorithm}_{datetime.date.today()}.pth"))
             print("Saving Model of Epoch {}".format(epoch + 1))
 
@@ -184,8 +205,9 @@ def compute_accuracy(model, loader):
             correct += (predicted == y_gpu).sum().item()
     return correct / total, sum(losses) / len(losses)
 
-
-writer = SummaryWriter("runs/cnn_attention_{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now()))
+# TODO: runs - c SRM
+# TODO: runs2 - без SRM
+writer = SummaryWriter("runs2/cnn_attention_{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now()))
 loss_history, train_history, val_history, val_losses = train_model(nn_model, train_loader, val_loader, criterion,
                                                                    optimizer, scheduler, num_epochs, writer,
                                                                    pretrained_epoch)
