@@ -11,8 +11,8 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms
 
 from dataset import DirConverStegoDataset
-from model import KovViT, ViT
-from visualization_functions import Plt_hist, visualize, build_confusion_matrix, visualize_confusion_matrix
+from model import ViT
+from visualization_functions import Plt_hist, build_confusion_matrix, visualize_confusion_matrix
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device: ", device, f"({torch.cuda.get_device_name(device)})" if torch.cuda.is_available() else "")
@@ -22,24 +22,25 @@ algorithm = 'HUGO'
 amount_of_pictures = 80000
 data_size = 70000
 
+
+transform = transforms.Compose(
+    [
+        # transforms.RandomRotation(180, interpolation=PIL.Image.BILINEAR),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
+        transforms.ToTensor()
+    ])
 data_train = DirConverStegoDataset(f'./NewMoreImagesDataset/{algorithm}-256cropped/', data_size,
-                                   transform=transforms.Compose([
-                                       #            transforms.RandomRotation(180, interpolation=PIL.Image.BILINEAR),
-                                       transforms.RandomHorizontalFlip(p=0.5),
-                                       transforms.RandomVerticalFlip(p=0.5),
-                                       transforms.ToTensor()
-                                   ]))
+                                   transform=transform)
 data_test = DirConverStegoDataset(f'./NewMoreImagesDataset/{algorithm}-256cropped/', amount_of_pictures - data_size,
-                                  transform=transforms.Compose([
-                                      #                            transforms.RandomRotation(180, interpolation=PIL.Image.BILINEAR),
-                                      transforms.RandomHorizontalFlip(p=0.5),
-                                      transforms.RandomVerticalFlip(p=0.5),
-                                      transforms.ToTensor()
-                                  ]))
+                                  transform=transform)
+# SEFAR10
+# data_train = torchvision.datasets.CIFAR10(root='./cifar10', train=True, download=True, transform=transform)
+# data_test = torchvision.datasets.CIFAR10(root='./cifar10', train=False, download=True, transform=transform)
 
 batch_size = 32
 validation_split = .2
-num_epochs = 50
+num_epochs = 150
 pretrained_epoch = 0
 save = True
 
@@ -54,23 +55,32 @@ val_sampler = SubsetRandomSampler(val_indices)
 
 train_loader = DataLoader(data_train, batch_size=batch_size, sampler=train_sampler)
 val_loader = DataLoader(data_train, batch_size=batch_size, sampler=val_sampler)
+# SEFAR10
+# train_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
+# val_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
 
 # TODO: Слева - с SRM
 # TODO: Справа - без SRM
 
 nn_model = ViT(
     image_size=256,
-    patch_size=8,
+    patch_size=16,
     num_classes=2,
-    channels=1,
-    dim=1024,
-    depth=6,
-    heads=16,
-    mlp_dim=2048,
-    dropout=0.1,
-    emb_dropout=0.1,
+    channels=3,
+    dim_model=16,
+    depth=1,
+    heads=8,
+    mlp_dim=32,
+    dropout=0.2,
+    emb_dropout=0.2,
     device=device
 )
+
+# nn_model = VisionTransformer(
+#     img_size=256,
+#     emb_size=256,
+#     device=device
+# )
 # KovViT(
 #     device=device,
 #     img_size=256,
@@ -93,18 +103,20 @@ nn_model.to(device)
 if pretrained_epoch != 0:
     nn_model.load_state_dict(torch.load(f'./trained/cnn_epoch{(pretrained_epoch):03}.pth'))
 
-criterion = nn.CrossEntropyLoss().type(torch.cuda.FloatTensor)
+criterion = nn.CrossEntropyLoss(
+    label_smoothing=0.15
+).type(torch.cuda.FloatTensor)
 
 optimizer = torch.optim.AdamW(
     nn_model.parameters(),
-    lr=0.001,
+    lr=0.0005,
     betas=(0.9, 0.999),
     eps=1e-8,
     # weight_decay=0.9,
     weight_decay=0,
 )
 
-scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.75, patience=5, min_lr=0.00001)
+scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.75, patience=5, min_lr=0.000001)
 
 
 def train_model(model, train_loader, val_loader, loss, optimizer, scheduler, num_epochs, writer, first_epoch=0):
@@ -175,11 +187,11 @@ def train_model(model, train_loader, val_loader, loss, optimizer, scheduler, num
         if save:
             # TODO: trained - c SRM
             # TODO: trained2 - без SRM
-            torch.save(model.state_dict(), os.path.join('./trained2', "cnn_epoch{:03d}.pth".format(epoch + 1)))
+            torch.save(model.state_dict(), os.path.join('./trained', "cnn_epoch{:03d}.pth".format(epoch + 1)))
             if (best_epoch == epoch + 1):
                 # TODO: best_checkpoints - c SRM
                 # TODO: best_checkpoints2 - без SRM
-                torch.save(model.state_dict(), os.path.join('./best_checkpoints2',
+                torch.save(model.state_dict(), os.path.join('./best_checkpoints',
                                                             f"cnn_epoch{epoch + 1:03d}_{algorithm}_{datetime.date.today()}.pth"))
             print("Saving Model of Epoch {}".format(epoch + 1))
 
@@ -205,9 +217,10 @@ def compute_accuracy(model, loader):
             correct += (predicted == y_gpu).sum().item()
     return correct / total, sum(losses) / len(losses)
 
+
 # TODO: runs - c SRM
 # TODO: runs2 - без SRM
-writer = SummaryWriter("runs2/cnn_attention_{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now()))
+writer = SummaryWriter("runs/cnn_attention_{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now()))
 loss_history, train_history, val_history, val_losses = train_model(nn_model, train_loader, val_loader, criterion,
                                                                    optimizer, scheduler, num_epochs, writer,
                                                                    pretrained_epoch)
@@ -216,7 +229,7 @@ test_range = list(range(70001, 80000))
 np.random.shuffle(test_range)
 test_sampler = SubsetRandomSampler(test_range)
 test_loader = torch.utils.data.DataLoader(data_test, batch_size=batch_size, sampler=test_sampler)
-visualize(nn_model, test_loader, writer, device, batch_size, algorithm)
+# visualize(nn_model, test_loader, writer, device, batch_size, algorithm)
 test_accuracy, test_loss = compute_accuracy(nn_model, test_loader)
 
 print(f"Test accuracy: {test_accuracy}, Test loss: {test_loss}")
