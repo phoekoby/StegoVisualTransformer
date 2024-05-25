@@ -90,7 +90,7 @@ class SRMConv(nn.Module):
     def __init__(self, device) -> None:
         super().__init__()
         self.srm = torch.from_numpy(np.load("srm.npy")).to(device).type(torch.cuda.FloatTensor)
-        self.tlu = nn.Hardtanh(min_val=-5.0, max_val=5.0)
+        self.tlu = nn.Hardtanh(min_val=-3.0, max_val=3.0)
 
     def forward(self, inp):
         return self.tlu(
@@ -148,7 +148,6 @@ class Transformer(nn.Module):
 
         self.layers = nn.ModuleList([])
 
-        # self.out = nn.Linear(dim_head * n_heads, dim)
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
                 nn.MultiheadAttention(dim, n_heads, dropout=dropout, batch_first=True),
@@ -157,19 +156,13 @@ class Transformer(nn.Module):
 
     def forward(self, x):
         batch_size, n_patch, _ = x.size()
-        # (B, N, D) -> (B, nb_head, N, D//nb_head)
+
         for attn, ff in self.layers:
             q, k, v = self.query(x), self.key(x), self.value(x)
-            # print(q.shape)
-
-            # q = q.view(batch_size, self.n_heads, n_patch, self.dim_head)
-            # k = k.view(batch_size, self.n_heads, n_patch, self.dim_head)
-            # v = v.view(batch_size, self.n_heads, n_patch, self.dim_head)
-
             w, attention = attn(q, k, v)
             x = w + x
             x = ff(x) + x
-        # x = self.out(x)
+
         return self.norm(x)
 
 
@@ -215,19 +208,21 @@ class ViT(nn.Module):
         # Увеличивает стеганографический шум
         channels = 32
         self.eps = 0.001
+        self.momentum = 0.2
         self.srm = nn.Sequential(
             SRMConv(device=device),
-            nn.BatchNorm2d(30, eps=self.eps, momentum=0.2)
+            nn.BatchNorm2d(30, eps=self.eps, momentum=self.momentum),
+            # GaussianActivationLayer(init_sigma=0.1 * random.random())
         )
         self.cnn_block = nn.Sequential(
-            nn.Conv2d(30, 64, kernel_size=(3, 3), padding=1, stride=(1, 1),bias=False),
-            GaussianActivationLayer(init_sigma=0.1 * random.random()),
-            nn.BatchNorm2d(64, eps=self.eps, momentum=0.2),
+            nn.Conv2d(30, 32, kernel_size=(3, 3), padding=1, stride=(1, 1),bias=False), # 32
+            GaussianActivationLayer(init_sigma=0.1 * random.random()), # 32
+            nn.BatchNorm2d(32, eps=self.eps, momentum=self.momentum),  # 32
             nn.AvgPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0),
             #
-            nn.Conv2d(64, 32, (3, 3), stride=(1, 1), padding=1),
+            nn.Conv2d(32, 32, (3, 3), stride=(1, 1), padding=1), # 32
             GaussianActivationLayer(init_sigma=0.1 * random.random()),
-            nn.BatchNorm2d(32, eps=self.eps, momentum=0.2),
+            nn.BatchNorm2d(32, eps=self.eps, momentum=self.momentum),
             nn.AvgPool2d(kernel_size=(2, 2), stride=(2, 2), padding=0),
             #
             # nn.Conv2d(128, 128, (3, 3), stride=(1, 1), padding=1),
@@ -257,8 +252,6 @@ class ViT(nn.Module):
         self.dropout = nn.Dropout(emb_dropout)
 
         self.transformer = Transformer(dim_model, depth, heads, dim_head, mlp_dim, dropout)
-
-        # self.to_latent = nn.Identity()
 
         self.mlp_head = MLPHead(dim_model, num_classes=num_classes)
 

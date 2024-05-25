@@ -7,3 +7,203 @@ Test accuracy: 0.8152815281528153, Test loss: 0.42125580514581823
 Попробовать:
     Увеличить количество каналов в сверточных слоях
     Увеличить dropOut и увеличить label smoothing
+
+-----
+30 30 30
+image_size=256,
+patch_size=16,
+num_classes=2,
+channels=3,
+dim_model=16,
+depth=1,
+heads=16,
+mlp_dim=16,
+dropout=0.1, # 0.1
+emb_dropout=0.1, # 0.1
+device=device
+
+
+
+Epoch: 150, Average loss: 0.431545, Validation loss: 0.461288, Train accuracy: 0.807268, Val accuracy: 0.778500
+Saving Model of Epoch 150
+Test accuracy: 0.8031803180318032, Test loss: 0.4286599652454876
+------
+
+-----
+30 32 32 без гауссианы после SRM
+image_size=256,
+patch_size=16,
+num_classes=2,
+channels=3,
+dim_model=8,
+depth=1,
+heads=8,
+mlp_dim=16,
+dropout=0.1, # 0.1
+emb_dropout=0.1, # 0.1
+device=device
+
+
+Test accuracy: 0.78, Test loss: 0.4286599652454876
+
+------
+
+-----
+30 32 32 без гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=16,
+    depth=1,
+    heads=8,
+    mlp_dim=32,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+
+
+Epoch: 150, Average loss: 0.430261, Validation loss: 0.459267, Train accuracy: 0.811911, Val accuracy: 0.785286
+Saving Model of Epoch 150
+Test accuracy: 0.8132813281328133, Test loss: 0.4234481733827926
+------
+
+
+-----
+30 32 32 без гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=32,
+    depth=1,
+    heads=8,
+    mlp_dim=64,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+Test accuracy: 0.7832813281328133
+------
+
+-----
+30 32 32 без гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=8,
+    depth=1,
+    heads=8,
+    mlp_dim=16,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+------
+
+-----
+30 32 32 без гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=16,
+    depth=2,
+    heads=8,
+    mlp_dim=32,
+    dropout=0.2, # 0.1
+    emb_dropout=0.2, # 0.1
+    device=device
+
+    Test accuracy: 0.5578557855785579, Test loss: 0.6534376182495215
+------
+
+-----
+30 32 32 без гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=16,
+    depth=1,
+    heads=8,
+    mlp_dim=32,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+    Epoch: 150, Average loss: 0.666174, Validation loss: 0.660986, Train accuracy: 0.552125, Val accuracy: 0.553143
+Saving Model of Epoch 150
+Test accuracy: 0.5727572757275727, Test loss: 0.6495713734398254
+------
+
+-----
+30 32 32 без гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=32,
+    depth=1,
+    heads=8,
+    mlp_dim=64,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+    Epoch: 150, Average loss: 0.644694, Validation loss: 0.635459, Train accuracy: 0.573250, Val accuracy: 0.582786
+Saving Model of Epoch 150
+Test accuracy: 0.590959095909591, Test loss: 0.6267937195186798
+------
+-----
+30 32 32 с гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=16,
+    depth=1,
+    heads=8,
+    mlp_dim=64,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+    Epoch: 150, Average loss: 0.691750, Validation loss: 0.691217, Train accuracy: 0.512589, Val accuracy: 0.509643
+Saving Model of Epoch 150
+Test accuracy: 0.5117511751175118, Test loss: 0.6916071877311974
+------
+
+-----
+30 32 32 с гауссианы после SRM
+  image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=32,
+    depth=1,
+    heads=8,
+    mlp_dim=128,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+    Epoch: 89, Average loss: 0.595508, Validation loss: 0.598260, Train accuracy: 0.629518, Val accuracy: 0.625786
+------
+
+-----
+30 64 32 с гауссианы после SRM
+    image_size=256,
+    patch_size=16,
+    num_classes=2,
+    channels=3,
+    dim_model=32,
+    depth=1,
+    heads=8,
+    mlp_dim=256,
+    dropout=0.1, # 0.1
+    emb_dropout=0.1, # 0.1
+    device=device
+
+-----

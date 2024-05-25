@@ -21,5 +21,6 @@ class DirConverStegoDataset:
             image = self.transform(image)
         if self.target_transform:
             label = self.target_transform(label)
+            print(idx)
         idx += 1
         return (image, label)

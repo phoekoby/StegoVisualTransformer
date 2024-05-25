@@ -19,9 +19,8 @@ print("Using device: ", device, f"({torch.cuda.get_device_name(device)})" if tor
 
 algorithm = 'HUGO'
 
-amount_of_pictures = 80000
-data_size = 70000
-
+amount_of_pictures = 200000
+data_size = 160000
 
 transform = transforms.Compose(
     [
@@ -45,16 +44,20 @@ pretrained_epoch = 0
 save = True
 
 split = int(np.floor(validation_split * data_size))
-indices = list(range(data_size))
+indices = list(range(amount_of_pictures))
 
 np.random.shuffle(indices)
-train_indices, val_indices = indices[split:], indices[:split]
+
+train_indices, val_indices, test_indices = indices[split:data_size], indices[:split], indices[data_size:]
 
 train_sampler = SubsetRandomSampler(train_indices)
 val_sampler = SubsetRandomSampler(val_indices)
+test_sampler = SubsetRandomSampler(test_indices)
 
 train_loader = DataLoader(data_train, batch_size=batch_size, sampler=train_sampler)
 val_loader = DataLoader(data_train, batch_size=batch_size, sampler=val_sampler)
+test_loader = DataLoader(data_test, batch_size=batch_size, sampler=test_sampler)
+
 # SEFAR10
 # train_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
 # val_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
@@ -71,8 +74,8 @@ nn_model = ViT(
     depth=1,
     heads=8,
     mlp_dim=32,
-    dropout=0.2,
-    emb_dropout=0.2,
+    dropout=0.1,  # 0.1
+    emb_dropout=0.1,  # 0.1
     device=device
 )
 
@@ -104,7 +107,7 @@ if pretrained_epoch != 0:
     nn_model.load_state_dict(torch.load(f'./trained/cnn_epoch{(pretrained_epoch):03}.pth'))
 
 criterion = nn.CrossEntropyLoss(
-    label_smoothing=0.15
+    label_smoothing=0.1  # 0.1
 ).type(torch.cuda.FloatTensor)
 
 optimizer = torch.optim.AdamW(
@@ -220,19 +223,16 @@ def compute_accuracy(model, loader):
 
 # TODO: runs - c SRM
 # TODO: runs2 - без SRM
-writer = SummaryWriter("runs/cnn_attention_{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now()))
+writer = SummaryWriter("runs/{}_attention_{:%Y-%m-%d_%H-%M-%S}".format(algorithm, datetime.datetime.now()))
 loss_history, train_history, val_history, val_losses = train_model(nn_model, train_loader, val_loader, criterion,
                                                                    optimizer, scheduler, num_epochs, writer,
                                                                    pretrained_epoch)
 Plt_hist(loss_history, train_history, val_history, val_losses, writer)
-test_range = list(range(70001, 80000))
-np.random.shuffle(test_range)
-test_sampler = SubsetRandomSampler(test_range)
-test_loader = torch.utils.data.DataLoader(data_test, batch_size=batch_size, sampler=test_sampler)
+
 # visualize(nn_model, test_loader, writer, device, batch_size, algorithm)
 test_accuracy, test_loss = compute_accuracy(nn_model, test_loader)
 
-print(f"Test accuracy: {test_accuracy}, Test loss: {test_loss}")
+print(f"Algorithm: {algorithm} Test accuracy: {test_accuracy}, Test loss: {test_loss}")
 
 
 def evaluate_model(model, loader, indices):
@@ -254,6 +254,6 @@ def evaluate_model(model, loader, indices):
     return predictions, ground_truth
 
 
-predictions, gt = evaluate_model(nn_model, test_loader, test_range)
+predictions, gt = evaluate_model(nn_model, test_loader, test_indices)
 confusion_matrix = build_confusion_matrix(predictions, gt)
 visualize_confusion_matrix(confusion_matrix, writer)
