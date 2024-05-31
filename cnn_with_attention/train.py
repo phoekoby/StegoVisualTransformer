@@ -1,6 +1,7 @@
 import datetime
 import os
 
+import PIL
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,14 +11,39 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import transforms
 
-from dataset import DirConverStegoDataset
-from model import ViT
-from visualization_functions import Plt_hist, build_confusion_matrix, visualize_confusion_matrix
+from model import SRMKovNet
+from visualization_functions import Plt_hist, visualize, build_confusion_matrix, visualize_confusion_matrix
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print("Using device: ", device, f"({torch.cuda.get_device_name(device)})" if torch.cuda.is_available() else "")
+device = torch.device("cuda")
 
-algorithm = 'MULTIAL'
+
+class CustomDataset:
+    def __init__(self, img_dir, amount, transform=None, target_transform=None):
+        self.img_dir = img_dir
+        self.transform = transform
+        self.target_transform = target_transform
+        self.amount = amount
+
+    def __len__(self):
+        return self.amount
+
+    def __getitem__(self, idx):
+        image = None
+        num = int(idx / 2) + 1
+        label = idx % 2
+        if label == 0:
+            image = PIL.Image.open(self.img_dir + "cover/" + str(num) + ".pgm")
+        else:
+            image = PIL.Image.open(self.img_dir + "stego/" + str(num) + ".pgm")
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        idx += 1
+        return (image, label)
+
+
+algorithm = 'HUGO'
 
 amount_of_pictures = 200000
 data_size = 160000
@@ -29,18 +55,17 @@ transform = transforms.Compose(
         transforms.RandomVerticalFlip(p=0.5),
         transforms.ToTensor()
     ])
+
 data_train = DirConverStegoDataset(f'./NewMoreImagesDataset/{algorithm}-256cropped/', data_size,
                                    transform=transform)
 data_test = DirConverStegoDataset(f'./NewMoreImagesDataset/{algorithm}-256cropped/', amount_of_pictures - data_size,
                                   transform=transform)
-# SEFAR10
-# data_train = torchvision.datasets.CIFAR10(root='./cifar10', train=True, download=True, transform=transform)
-# data_test = torchvision.datasets.CIFAR10(root='./cifar10', train=False, download=True, transform=transform)
 
 batch_size = 32
+data_size = 70000
 validation_split = .2
-num_epochs = 250
-pretrained_epoch = 67
+num_epochs = 100
+pretrained_epoch = 71
 save = True
 
 split = int(np.floor(validation_split * data_size))
@@ -58,45 +83,8 @@ train_loader = DataLoader(data_train, batch_size=batch_size, sampler=train_sampl
 val_loader = DataLoader(data_train, batch_size=batch_size, sampler=val_sampler)
 test_loader = DataLoader(data_test, batch_size=batch_size, sampler=test_sampler)
 
-# SEFAR10
-# train_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
-# val_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
 
-# TODO: Слева - с SRM
-# TODO: Справа - без SRM
-
-nn_model = ViT(
-    image_size=256,
-    patch_size=16,
-    num_classes=2,
-    channels=3,
-    dim_model=16,
-    depth=1,
-    heads=8,
-    mlp_dim=32,
-    dropout=0.1,  # 0.1
-    emb_dropout=0.1,  # 0.1
-    device=device
-)
-
-# nn_model = VisionTransformer(
-#     img_size=256,
-#     emb_size=256,
-#     device=device
-# )
-# KovViT(
-#     device=device,
-#     img_size=256,
-#     patch_size=16,
-#     n_channels=1,
-#     hidden_dim=512,
-#     nhead=16,
-#     num_layers=4,
-#     mlp_dim=1024,
-#     n_classes=2,
-# dropout = 0.1,
-# emb_dropout = 0.1
-# )
+nn_model = SRMKovNet(attention=True, device=device)
 
 nn_model.type(torch.cuda.FloatTensor)
 nn_model.to(device)
@@ -106,20 +94,17 @@ nn_model.to(device)
 if pretrained_epoch != 0:
     nn_model.load_state_dict(torch.load(f'./trained/cnn_epoch{(pretrained_epoch):03}.pth'))
 
-criterion = nn.CrossEntropyLoss(
-    label_smoothing=0.1  # 0.1
-).type(torch.cuda.FloatTensor)
+criterion = nn.CrossEntropyLoss().type(torch.cuda.FloatTensor)
 
 optimizer = torch.optim.AdamW(
     nn_model.parameters(),
-    lr=0.0005,
+    lr=0.0001,
     betas=(0.9, 0.999),
     eps=1e-8,
-    # weight_decay=0.9,
     weight_decay=0,
 )
 
-scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.75, patience=5, min_lr=0.000001)
+scheduler = ReduceLROnPlateau(optimizer, mode='max', factor=0.75, patience=5, min_lr=0.00001)
 
 
 def train_model(model, train_loader, val_loader, loss, optimizer, scheduler, num_epochs, writer, first_epoch=0):
@@ -188,12 +173,8 @@ def train_model(model, train_loader, val_loader, loss, optimizer, scheduler, num
             epoch + 1, ave_loss, val_loss, train_accuracy, val_accuracy))
 
         if save:
-            # TODO: trained - c SRM
-            # TODO: trained2 - без SRM
             torch.save(model.state_dict(), os.path.join('./trained', "cnn_epoch{:03d}.pth".format(epoch + 1)))
             if (best_epoch == epoch + 1):
-                # TODO: best_checkpoints - c SRM
-                # TODO: best_checkpoints2 - без SRM
                 torch.save(model.state_dict(), os.path.join('./best_checkpoints',
                                                             f"cnn_epoch{epoch + 1:03d}_{algorithm}_{datetime.date.today()}.pth"))
             print("Saving Model of Epoch {}".format(epoch + 1))
@@ -221,18 +202,15 @@ def compute_accuracy(model, loader):
     return correct / total, sum(losses) / len(losses)
 
 
-# TODO: runs - c SRM
-# TODO: runs2 - без SRM
-writer = SummaryWriter("runs/{}_attention_{:%Y-%m-%d_%H-%M-%S}".format(algorithm, datetime.datetime.now()))
+writer = SummaryWriter("runs/cnn_attention_{:%Y-%m-%d_%H-%M-%S}".format(datetime.datetime.now()))
 loss_history, train_history, val_history, val_losses = train_model(nn_model, train_loader, val_loader, criterion,
                                                                    optimizer, scheduler, num_epochs, writer,
                                                                    pretrained_epoch)
 Plt_hist(loss_history, train_history, val_history, val_losses, writer)
-
-# visualize(nn_model, test_loader, writer, device, batch_size, algorithm)
+visualize(nn_model, test_loader, writer, device, batch_size, algorithm)
 test_accuracy, test_loss = compute_accuracy(nn_model, test_loader)
 
-print(f"Algorithm: {algorithm} Test accuracy: {test_accuracy}, Test loss: {test_loss}")
+print(f"Test accuracy: {test_accuracy}, Test loss: {test_loss}")
 
 
 def evaluate_model(model, loader, indices):
@@ -254,6 +232,6 @@ def evaluate_model(model, loader, indices):
     return predictions, ground_truth
 
 
-predictions, gt = evaluate_model(nn_model, test_loader, test_indices)
+predictions, gt = evaluate_model(nn_model, test_loader, test_range)
 confusion_matrix = build_confusion_matrix(predictions, gt)
 visualize_confusion_matrix(confusion_matrix, writer)
