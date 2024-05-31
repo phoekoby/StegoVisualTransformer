@@ -39,8 +39,8 @@ data_test = DirConverStegoDataset(f'./NewMoreImagesDataset/{algorithm}-256croppe
 
 batch_size = 32
 validation_split = .2
-num_epochs = 250
-pretrained_epoch = 67
+num_epochs = 170
+pretrained_epoch = 140
 save = True
 
 split = int(np.floor(validation_split * data_size))

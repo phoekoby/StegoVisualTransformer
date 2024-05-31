@@ -2,10 +2,10 @@
 
 ## Результаты модели ViT на алгоритмах S-UNIWARD, WOW, HUGO
 
-| **Модель\Алгоритмы**             | [WOW](https://dde.binghamton.edu/download/stego_algorithms/download/WOW_windows_vc_2010_v10.zip) | [HUGO](https://dde.binghamton.edu/download/stego_algorithms/download/HUGO_bounding_windows_vc_2010_v10.zip) | [S-UNIWARD](https://dde.binghamton.edu/download/stego_algorithms/download/S-UNIWARD_windows_vc_2010_v10.zip) |
-|----------------------------------|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| Stego ViT                        | *85.8%*                                                                                          | *89.8%*                                                                                                     | *88.3%*                                                                                                      |
-| Stego CNN With Spatial Attention | None                                                                                             | *78%*                                                                                                       | *73.7%*                                                                                                      |
+| **Модель\Алгоритмы**             | [WOW](https://dde.binghamton.edu/download/stego_algorithms/download/WOW_windows_vc_2010_v10.zip) | [HUGO](https://dde.binghamton.edu/download/stego_algorithms/download/HUGO_bounding_windows_vc_2010_v10.zip) | [S-UNIWARD](https://dde.binghamton.edu/download/stego_algorithms/download/S-UNIWARD_windows_vc_2010_v10.zip) | All algorithms |
+|----------------------------------|--------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|----------------|
+| Stego ViT                        | *85.8%*                                                                                          | *89.8%*                                                                                                     | *88.3%*                                                                                                      | *87.9*         |
+| Stego CNN With Spatial Attention | None                                                                                             | *78%*                                                                                                       | *73.7%*                                                                                                      | None           |
 
 ## Архитектура моделей
 
@@ -17,8 +17,8 @@
 
 ## Стеганографические алгоритмы
 
-| **Алгоритмы**                                          | [**S-UNIWARD**](./stego_algs_exes/S-UNIWARD.exe)                | [**WOW**](./stego_algs_exes/WOW.exe)           | [**HUGO**](./stego_algs_exes/HUGO)               |
-|--------------------------------------------------------|-----------------------------------------------------------------|------------------------------------------------|--------------------------------------------------|
+| **Алгоритмы**                                 | [**S-UNIWARD**](./stego_algs_exes/S-UNIWARD.exe)                | [**WOW**](./stego_algs_exes/WOW.exe)           | [**HUGO**](./stego_algs_exes/HUGO)               |
+|-----------------------------------------------|-----------------------------------------------------------------|------------------------------------------------|--------------------------------------------------|
 | ![cover.png](./algorithm_visualize/cover.png) | ![S-UNIWARD_mask.png](./algorithm_visualize/S-UNIWARD_mask.png) | ![WOW.png](./algorithm_visualize/WOW_mask.png) | ![HUGO.png](./algorithm_visualize/HUGO_mask.png) |
 
 ## Dataset
